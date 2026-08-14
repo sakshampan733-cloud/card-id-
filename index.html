@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Card ID</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Card ID">
+<meta name="theme-color" content="#f2f2f7">
+<meta name="description" content="Identify which of your cards a bank SMS belongs to. Everything stays on your device.">
+<link id="appleIcon" rel="apple-touch-icon" href="">
+<style>
+/* ─────────────────────────── tokens ─────────────────────────── */
+:root{
+  --bg:#f2f2f7;
+  --bg-elev:#ffffff;
+  --group:#ffffff;
+  --sep:rgba(60,60,67,.20);
+  --sep-strong:rgba(60,60,67,.34);
+  --text:#000000;
+  --text-2:rgba(60,60,67,.62);
+  --text-3:rgba(60,60,67,.34);
+  --accent:#0A84FF;
+  --accent-ink:#ffffff;
+  --green:#28a745;
+  --red:#e5342a;
+  --orange:#e08600;
+  --fill:rgba(118,118,128,.12);
+  --fill-2:rgba(118,118,128,.18);
+  --bar:rgba(249,249,251,.82);
+  --shadow:0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.06);
+  --radius:14px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-t:env(safe-area-inset-top,0px);
+  color-scheme:light;
+}
+[data-theme="dark"]{
+  --bg:#000000;
+  --bg-elev:#1c1c1e;
+  --group:#1c1c1e;
+  --sep:rgba(84,84,88,.55);
+  --sep-strong:rgba(84,84,88,.75);
+  --text:#ffffff;
+  --text-2:rgba(235,235,245,.60);
+  --text-3:rgba(235,235,245,.30);
+  --accent:#0A84FF;
+  --green:#30D158;
+  --red:#FF453A;
+  --orange:#FF9F0A;
+  --fill:rgba(118,118,128,.24);
+  --fill-2:rgba(118,118,128,.36);
+  --bar:rgba(22,22,24,.82);
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000; --bg-elev:#1c1c1e; --group:#1c1c1e;
+    --sep:rgba(84,84,88,.55); --sep-strong:rgba(84,84,88,.75);
+    --text:#ffffff; --text-2:rgba(235,235,245,.60); --text-3:rgba(235,235,245,.30);
+    --green:#30D158; --red:#FF453A; --orange:#FF9F0A;
+    --fill:rgba(118,118,128,.24); --fill-2:rgba(118,118,128,.36);
+    --bar:rgba(22,22,24,.82);
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.5);
+    color-scheme:dark;
+  }
+}
+
+/* ─────────────────────────── base ─────────────────────────── */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font:400 17px/1.32 -apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  overscroll-behavior-y:none;
+}
+button,input,textarea,select{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;cursor:pointer}
+a{color:var(--accent);text-decoration:none}
+::selection{background:rgba(10,132,255,.25)}
+
+/* ─────────────────────────── shell ─────────────────────────── */
+#app{min-height:100%;display:flex;flex-direction:column}
+.nav{
+  position:sticky;top:0;z-index:40;
+  padding:calc(var(--safe-t) + 6px) 16px 6px;
+  background:var(--bar);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:.5px solid transparent;
+  transition:border-color .2s;
+}
+.nav.scrolled{border-bottom-color:var(--sep)}
+.nav-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:34px}
+.nav h1{margin:0;font:700 32px/1.15 -apple-system,BlinkMacSystemFont,"SF Pro Display",system-ui,sans-serif;letter-spacing:-.7px}
+.nav-btn{color:var(--accent);font-size:17px;padding:6px 2px;white-space:nowrap}
+.nav-btn.strong{font-weight:600}
+
+main{flex:1;padding:4px 0 calc(76px + var(--safe-b))}
+.wrap{max-width:640px;margin:0 auto;padding:0 16px}
+
+/* tab bar */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  display:flex;
+  padding:6px 0 calc(4px + var(--safe-b));
+  background:var(--bar);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  backdrop-filter:saturate(180%) blur(20px);
+  border-top:.5px solid var(--sep);
+}
+.tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+  color:var(--text-2);font-size:10px;letter-spacing:.02em;font-weight:500;
+  padding:2px 0;transition:color .15s;
+}
+.tab svg{width:26px;height:26px;display:block}
+.tab.on{color:var(--accent)}
+.tab .badge{
+  position:absolute;transform:translate(14px,-4px);
+  min-width:8px;height:8px;border-radius:99px;background:var(--red);
+}
+
+/* ─────────────────────────── lists ─────────────────────────── */
+.sect-h{
+  font-size:13px;font-weight:400;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--text-2);margin:26px 0 7px;padding:0 16px;
+}
+.sect-h:first-child{margin-top:14px}
+.group{background:var(--group);border-radius:var(--radius);overflow:hidden}
+.row{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 16px;min-height:44px;width:100%;text-align:left;
+  position:relative;background:var(--group);
+}
+.row + .row::before{
+  content:"";position:absolute;left:16px;right:0;top:0;height:.5px;background:var(--sep);
+}
+.row.tappable:active{background:var(--fill)}
+.row .grow{flex:1;min-width:0}
+/* display:block matters — text-overflow only ellipsises a block box */
+.row .ttl{display:block;font-size:17px;letter-spacing:-.4px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .sub{display:block;font-size:13px;color:var(--text-2);margin-top:2px;letter-spacing:-.08px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .val{font-size:17px;color:var(--text-2);letter-spacing:-.4px}
+.chev{width:8px;height:13px;flex:none;color:var(--text-3)}
+.row.center{justify-content:center}
+.row.link{color:var(--accent)}
+.row.danger{color:var(--red);justify-content:center}
+.note{font-size:13px;color:var(--text-2);padding:7px 16px 0;line-height:1.4}
+
+/* ─────────────────────────── identify ─────────────────────────── */
+.card-visual{
+  border-radius:18px;padding:16px 18px;color:#fff;position:relative;overflow:hidden;
+  box-shadow:var(--shadow);
+}
+.card-visual::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(120% 90% at 88% 8%,rgba(255,255,255,.30),transparent 60%);
+  pointer-events:none;
+}
+.cv-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.cv-owner{font:700 26px/1.15 -apple-system,BlinkMacSystemFont,"SF Pro Display",system-ui;letter-spacing:-.6px}
+.cv-bank{font-size:15px;opacity:.92;margin-top:3px;letter-spacing:-.2px}
+.cv-type{
+  font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  background:rgba(255,255,255,.22);padding:4px 9px;border-radius:99px;white-space:nowrap;
+}
+.cv-num{
+  margin-top:22px;font:600 22px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.16em;display:flex;align-items:baseline;gap:10px;
+}
+.cv-num small{font-size:13px;letter-spacing:.02em;opacity:.85;font-family:inherit;font-weight:500}
+.cv-nick{margin-top:9px;font-size:13px;opacity:.9;letter-spacing:-.08px}
+
+.verdict{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:0 2px}
+.verdict .dot{width:9px;height:9px;border-radius:99px;flex:none}
+.verdict .txt{font-size:13px;font-weight:600;letter-spacing:.01em;text-transform:uppercase}
+.v-ok .dot{background:var(--green)} .v-ok .txt{color:var(--green)}
+.v-warn .dot{background:var(--orange)} .v-warn .txt{color:var(--orange)}
+.v-bad .dot{background:var(--red)} .v-bad .txt{color:var(--red)}
+
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.fact{
+  background:var(--group);border-radius:11px;padding:8px 12px;flex:1 1 auto;min-width:96px;
+}
+.fact .k{font-size:11px;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em}
+.fact .v{font-size:16px;margin-top:2px;letter-spacing:-.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fact .v.amt{font-weight:600}
+
+.empty{
+  text-align:center;padding:38px 24px 30px;color:var(--text-2);
+}
+.empty .ico{font-size:40px;margin-bottom:10px;opacity:.9}
+.empty h3{margin:0 0 6px;color:var(--text);font-size:19px;letter-spacing:-.4px}
+.empty p{margin:0;font-size:14px;line-height:1.45}
+
+textarea.paste{
+  width:100%;min-height:104px;resize:vertical;
+  background:var(--group);border:none;border-radius:var(--radius);
+  padding:13px 14px;font-size:16px;line-height:1.4;letter-spacing:-.2px;
+  outline:none;-webkit-appearance:none;
+}
+textarea.paste::placeholder{color:var(--text-3)}
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  background:var(--accent);color:#fff;border-radius:12px;
+  padding:14px;font-size:17px;font-weight:600;letter-spacing:-.4px;
+  transition:opacity .12s,transform .12s;
+}
+.btn:active{opacity:.82;transform:scale(.985)}
+.btn.sec{background:var(--fill);color:var(--accent)}
+.btn.ghost{background:none;color:var(--accent);padding:10px;font-weight:400}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.btn-row{display:flex;gap:10px;margin-top:12px}
+
+/* card colour chip */
+.chip{width:34px;height:24px;border-radius:6px;flex:none;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.12)}
+.chip.lg{width:44px;height:30px;border-radius:7px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em}
+
+/* ─────────────────────────── sheet ─────────────────────────── */
+.scrim{
+  position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);
+  opacity:0;pointer-events:none;transition:opacity .28s ease;
+}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:61;
+  max-height:92vh;display:flex;flex-direction:column;
+  background:var(--bg);border-radius:14px 14px 0 0;
+  transform:translateY(101%);transition:transform .32s cubic-bezier(.32,.72,0,1);
+  padding-bottom:var(--safe-b);
+  box-shadow:0 -1px 30px rgba(0,0,0,.22);
+}
+.sheet.on{transform:translateY(0)}
+.sheet-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 16px;border-bottom:.5px solid var(--sep);flex:none;
+}
+.sheet-head h2{margin:0;font-size:17px;font-weight:600;letter-spacing:-.4px}
+.sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px}
+@media (min-width:700px){
+  .sheet{left:50%;right:auto;width:560px;transform:translate(-50%,101%);border-radius:14px;
+    bottom:20px;max-height:84vh}
+  .sheet.on{transform:translate(-50%,0)}
+}
+
+/* form */
+.field{display:flex;align-items:center;gap:12px;padding:9px 16px;background:var(--group);position:relative;min-height:46px}
+.field + .field::before{content:"";position:absolute;left:16px;right:0;top:0;height:.5px;background:var(--sep)}
+.field label{width:96px;flex:none;font-size:16px;letter-spacing:-.3px;color:var(--text)}
+.field input, .field select{
+  flex:1;min-width:0;background:none;border:none;outline:none;font-size:16px;
+  letter-spacing:-.3px;padding:4px 0;-webkit-appearance:none;text-align:right;
+}
+.field input::placeholder{color:var(--text-3)}
+.field.stack{display:block;padding:12px 16px}
+.seg{display:flex;background:var(--fill);border-radius:9px;padding:2px;flex:1}
+.seg button{
+  flex:1;padding:7px 6px;border-radius:7px;font-size:14px;font-weight:500;
+  letter-spacing:-.1px;color:var(--text);transition:background .15s;
+}
+.seg button.on{background:var(--bg-elev);box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:600}
+[data-theme="dark"] .seg button.on{background:#48484a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .seg button.on{background:#48484a}}
+.swatches{display:flex;flex-wrap:wrap;gap:12px;padding:4px 0 2px}
+.sw{width:32px;height:32px;border-radius:99px;position:relative;flex:none}
+.sw.on::after{
+  content:"";position:absolute;inset:-4px;border-radius:99px;
+  border:2px solid var(--text);opacity:.75;
+}
+
+/* history */
+.hrow .amt{font-size:16px;font-weight:600;letter-spacing:-.3px;white-space:nowrap}
+.hrow .amt.cr{color:var(--green)}
+.raw{
+  font-size:13px;line-height:1.45;color:var(--text-2);
+  padding:12px 16px;background:var(--group);border-radius:var(--radius);
+  white-space:pre-wrap;word-break:break-word;
+}
+.pill{
+  display:inline-block;font-size:11px;font-weight:600;letter-spacing:.03em;
+  padding:2px 7px;border-radius:99px;background:var(--fill-2);color:var(--text-2);
+  text-transform:uppercase;vertical-align:middle;
+}
+
+/* setup / steps */
+.steps{counter-reset:s;padding:0;margin:0;list-style:none}
+.steps li{
+  position:relative;padding:0 0 18px 38px;counter-increment:s;
+  font-size:15px;line-height:1.5;color:var(--text);
+}
+.steps li::before{
+  content:counter(s);position:absolute;left:0;top:-1px;
+  width:24px;height:24px;border-radius:99px;background:var(--accent);color:#fff;
+  font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;
+}
+.steps li b{font-weight:600}
+.steps code, code.inline{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;
+  background:var(--fill);padding:2px 5px;border-radius:5px;
+  overflow-wrap:break-word;   /* wrap between words, split a long token only if it must */
+}
+.urlbox{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.5;
+  background:var(--group);border-radius:var(--radius);padding:12px 14px;
+  overflow-wrap:anywhere;color:var(--text-2);
+}
+.urlbox .var{white-space:nowrap;color:var(--accent)}
+
+/* toast */
+#toast{
+  position:fixed;left:50%;bottom:calc(88px + var(--safe-b));z-index:90;
+  transform:translate(-50%,14px);opacity:0;pointer-events:none;
+  background:rgba(28,28,30,.94);color:#fff;
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  padding:11px 18px;border-radius:99px;font-size:14.5px;font-weight:500;letter-spacing:-.2px;
+  max-width:88vw;text-align:center;transition:opacity .2s,transform .2s;
+}
+[data-theme="dark"] #toast{background:rgba(58,58,60,.96)}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+.fade{animation:fade .28s ease both}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="nav" id="nav">
+    <div class="wrap nav-row" id="navRow"></div>
+  </header>
+  <main><div class="wrap" id="view"></div></main>
+  <nav class="tabbar" id="tabbar"></nav>
+</div>
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true">
+  <div class="sheet-head" id="sheetHead"></div>
+  <div class="sheet-body" id="sheetBody"></div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* =======================================================================
+   Card ID — identify which of your cards a bank SMS belongs to.
+   Single file, no build step, no backend. Everything lives on the device.
+
+   Layers, storage-side first. Each only reaches upward toward the UI.
+     1 utils      2 store (localStorage)   3 parse (pure)
+     4 match (pure)                        5 ui
+   The UI never touches localStorage directly — it calls Store.*.
+   ======================================================================= */
+
+/* ───────────────────────── 1. utils ───────────────────────── */
+const uid = p => (p||'') + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const $  = s => document.querySelector(s);
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+const clamp = (s,n)=> s.length>n ? s.slice(0,n-1)+'…' : s;
+
+function relTime(ts){
+  const d = Date.now()-ts, m = Math.round(d/60000);
+  if (m < 1) return 'Just now';
+  if (m < 60) return m+' min ago';
+  const h = Math.round(m/60);
+  if (h < 24) return h+' hr ago';
+  const day = new Date(ts), now = new Date();
+  const sameYear = day.getFullYear() === now.getFullYear();
+  const dd = Math.round(d/86400000);
+  if (dd < 7) return dd + (dd===1?' day ago':' days ago');
+  return day.toLocaleDateString(undefined,{day:'numeric',month:'short',year:sameYear?undefined:'numeric'});
+}
+function fullTime(ts){
+  return new Date(ts).toLocaleString(undefined,
+    {day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'});
+}
+
+/* ───────────────────────── 2. store ───────────────────────── */
+const KEY_CARDS = 'cardid_cards_v1';
+const KEY_HIST  = 'cardid_history_v1';
+const KEY_PREFS = 'cardid_prefs_v1';
+const HIST_CAP  = 500;
+
+const COLORS = [
+  {id:'blue',    name:'Blue',    hex:'#0A84FF', grad:['#0A84FF','#0061D5']},
+  {id:'indigo',  name:'Indigo',  hex:'#5E5CE6', grad:['#6E6CF0','#3F3DBE']},
+  {id:'purple',  name:'Purple',  hex:'#BF5AF2', grad:['#C86AF5','#8E3ABE']},
+  {id:'pink',    name:'Pink',    hex:'#FF375F', grad:['#FF5277','#D01840']},
+  {id:'red',     name:'Red',     hex:'#FF453A', grad:['#FF5C52','#C9271D']},
+  {id:'orange',  name:'Orange',  hex:'#FF9F0A', grad:['#FFAE2E','#D97800']},
+  {id:'green',   name:'Green',   hex:'#30D158', grad:['#3DDC66','#189B3C']},
+  {id:'teal',    name:'Teal',    hex:'#40C8E0', grad:['#4FD3EA','#1E90A8']},
+  {id:'graphite',name:'Graphite',hex:'#6C6C70', grad:['#7C7C82','#3A3A3C']}
+];
+const colorOf = id => COLORS.find(c=>c.id===id) || COLORS[0];
+const gradientOf = id => { const c = colorOf(id); return `linear-gradient(140deg,${c.grad[0]},${c.grad[1]})`; };
+
+function readJSON(key, fallback){
+  try{ const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+  catch(e){ console.warn('read failed', key, e); return fallback; }
+}
+function writeJSON(key, val){
+  try{ localStorage.setItem(key, JSON.stringify(val)); return true; }
+  catch(e){ console.warn('write failed', key, e); toast('Could not save — storage is full'); return false; }
+}
+
+const Store = {
+  /* cards */
+  cards(){ const a = readJSON(KEY_CARDS, []); return Array.isArray(a) ? a.map(normalizeCard) : []; },
+  saveCard(input){
+    const cards = Store.cards();
+    const c = validateCard(input);
+    if (c.id){
+      const i = cards.findIndex(x=>x.id===c.id);
+      if (i < 0) throw new Error('That card no longer exists');
+      cards[i] = Object.assign({}, cards[i], c, {updatedAt:Date.now()});
+    } else {
+      c.id = uid('c_'); c.createdAt = Date.now(); c.updatedAt = Date.now();
+      cards.push(c);
+    }
+    writeJSON(KEY_CARDS, cards);
+    return c;
+  },
+  removeCard(id){
+    writeJSON(KEY_CARDS, Store.cards().filter(c=>c.id!==id));
+  },
+
+  /* history */
+  history(){ const a = readJSON(KEY_HIST, []); return Array.isArray(a) ? a : []; },
+  logLookup(entry){
+    const h = Store.history();
+    // A share-sheet double-fire shouldn't create two identical rows.
+    if (h[0] && h[0].raw === entry.raw && Date.now() - h[0].ts < 8000){
+      h[0] = Object.assign(h[0], entry, {ts:h[0].ts});
+    } else {
+      h.unshift(Object.assign({id:uid('h_'), ts:Date.now()}, entry));
+    }
+    writeJSON(KEY_HIST, h.slice(0, HIST_CAP));
+    return h[0];
+  },
+  updateLookup(id, patch){
+    const h = Store.history();
+    const i = h.findIndex(x=>x.id===id);
+    if (i < 0) return;
+    h[i] = Object.assign(h[i], patch);
+    writeJSON(KEY_HIST, h);
+  },
+  removeLookup(id){ writeJSON(KEY_HIST, Store.history().filter(h=>h.id!==id)); },
+  clearHistory(){ writeJSON(KEY_HIST, []); },
+
+  /* prefs */
+  prefs(){ return Object.assign({theme:'system'}, readJSON(KEY_PREFS, {})); },
+  setPref(k,v){ const p = Store.prefs(); p[k] = v; writeJSON(KEY_PREFS, p); },
+
+  /* backup */
+  exportAll(){
+    return {app:'card-id', version:1, exportedAt:new Date().toISOString(),
+            cards:Store.cards(), history:Store.history()};
+  },
+  importAll(data, mode){
+    if (!data || data.app !== 'card-id' || !Array.isArray(data.cards))
+      throw new Error("That doesn't look like a Card ID backup");
+    const cards = data.cards.map(normalizeCard).filter(c=>c.last4 && c.bank);
+    const hist  = Array.isArray(data.history) ? data.history : [];
+    if (mode === 'replace'){
+      writeJSON(KEY_CARDS, cards);
+      writeJSON(KEY_HIST, hist.slice(0,HIST_CAP));
+      return {cards:cards.length, history:hist.length};
+    }
+    const mine = Store.cards();
+    let added = 0;
+    cards.forEach(c=>{
+      const dupe = mine.some(m => m.last4===c.last4 && m.bank.toLowerCase()===c.bank.toLowerCase()
+                                  && m.owner.toLowerCase()===c.owner.toLowerCase());
+      if (!dupe){ c.id = uid('c_'); mine.push(c); added++; }
+    });
+    writeJSON(KEY_CARDS, mine);
+    const ids = new Set(Store.history().map(h=>h.id));
+    const merged = Store.history().concat(hist.filter(h=>!ids.has(h.id)))
+                        .sort((a,b)=>b.ts-a.ts).slice(0,HIST_CAP);
+    writeJSON(KEY_HIST, merged);
+    return {cards:added, history:merged.length};
+  }
+};
+
+function normalizeCard(c){
+  c = c || {};
+  return {
+    id: c.id || uid('c_'),
+    bank: String(c.bank||'').trim(),
+    last4: String(c.last4||'').replace(/\D/g,'').slice(-4),
+    type: c.type === 'debit' ? 'debit' : 'credit',
+    owner: String(c.owner||'').trim(),
+    nickname: String(c.nickname||'').trim(),
+    color: COLORS.some(x=>x.id===c.color) ? c.color : 'blue',
+    createdAt: c.createdAt || Date.now(),
+    updatedAt: c.updatedAt || c.createdAt || Date.now()
+  };
+}
+function validateCard(input){
+  const c = normalizeCard(input);
+  c.id = input.id || null;
+  if (!c.bank) throw new Error('Bank name is required');
+  if (!/^\d{4}$/.test(c.last4)) throw new Error('Last 4 digits must be exactly 4 numbers');
+  if (!c.owner) throw new Error('Whose card it is, is required');
+  return c;
+}
+
+/* ───────────────────────── 3. parse (pure) ───────────────────────── */
+/* Indian bank / issuer names, most specific first so "Amazon Pay ICICI"
+   and "AU Bank" don't get swallowed by a looser pattern. */
+const BANKS = [
+  {id:'amazonpay', name:'Amazon Pay ICICI', re:/amazon\s*pay/i},
+  {id:'ausfb',   name:'AU Small Finance',  re:/\bau\s*(?:small\s*finance|bank)\b|\bausfb\b/i},
+  {id:'sc',      name:'Standard Chartered',re:/standard\s*chart|\bscbl?\b/i},
+  {id:'hdfc',    name:'HDFC Bank',         re:/\bhdfc\w*/i},
+  {id:'icici',   name:'ICICI Bank',        re:/\bicici\w*/i},
+  {id:'sbi',     name:'SBI',               re:/\bsbi\w*\b|state\s*bank\s*of\s*india/i},
+  {id:'axis',    name:'Axis Bank',         re:/\baxis\w*/i},
+  {id:'kotak',   name:'Kotak',             re:/\bkotak\w*|\bkmbl\b/i},
+  {id:'yes',     name:'Yes Bank',          re:/\byes\s*bank\b|\byesbnk\b/i},
+  {id:'indusind',name:'IndusInd',          re:/indusind|\bindus\s*bank\b/i},
+  {id:'idfc',    name:'IDFC First',        re:/\bidfc\w*/i},
+  {id:'rbl',     name:'RBL Bank',          re:/\brbl\w*/i},
+  {id:'pnb',     name:'PNB',               re:/\bpnb\b|punjab\s*national/i},
+  {id:'bob',     name:'Bank of Baroda',    re:/bank\s*of\s*baroda|\bbobcrd?\b|\bbarb\b/i},
+  {id:'canara',  name:'Canara Bank',       re:/\bcanara\b|\bcnrb\b/i},
+  {id:'union',   name:'Union Bank',        re:/union\s*bank|\bunionb\b/i},
+  {id:'federal', name:'Federal Bank',      re:/federal\s*bank|\bfedbnk\b/i},
+  {id:'idbi',    name:'IDBI Bank',         re:/\bidbi\w*/i},
+  {id:'bandhan', name:'Bandhan Bank',      re:/\bbandhan\b/i},
+  {id:'indian',  name:'Indian Bank',       re:/\bindian\s*bank\b/i},
+  {id:'iob',     name:'Indian Overseas',   re:/indian\s*overseas|\biob\b/i},
+  {id:'cbi',     name:'Central Bank',      re:/central\s*bank\s*of\s*india/i},
+  {id:'karnataka',name:'Karnataka Bank',   re:/karnataka\s*bank/i},
+  {id:'southindian',name:'South Indian Bank',re:/south\s*indian\s*bank|\bsib\b/i},
+  {id:'csb',     name:'CSB Bank',          re:/\bcsb\s*bank\b/i},
+  {id:'dcb',     name:'DCB Bank',          re:/\bdcb\s*bank\b/i},
+  {id:'equitas', name:'Equitas',           re:/\bequitas\b/i},
+  {id:'ujjivan', name:'Ujjivan',           re:/\bujjivan\b/i},
+  {id:'hsbc',    name:'HSBC',              re:/\bhsbc\b/i},
+  {id:'citi',    name:'Citi',              re:/\bciti\w*/i},
+  {id:'amex',    name:'American Express',  re:/\bamex\b|american\s*express/i},
+  {id:'dbs',     name:'DBS',               re:/\bdbs\b|\bdigibank\b/i},
+  {id:'deutsche',name:'Deutsche Bank',     re:/deutsche/i},
+  {id:'onecard', name:'OneCard',           re:/\bonecard\b|\bone\s*card\b/i},
+  {id:'slice',   name:'Slice',             re:/\bslice\b/i},
+  {id:'jupiter', name:'Jupiter',           re:/\bjupiter\b/i},
+  {id:'fi',      name:'Fi Money',          re:/\bfi\s*money\b|\bfi\.money\b|\bepifi\b/i},
+  {id:'paytm',   name:'Paytm',             re:/\bpaytm\b|\bppbl\b/i},
+  {id:'airtel',  name:'Airtel Payments',   re:/airtel\s*payments?/i},
+  {id:'jio',     name:'Jio Payments',      re:/jio\s*payments?/i},
+  {id:'bajaj',   name:'Bajaj Finserv',     re:/bajaj\s*(?:finserv|finance)/i}
+];
+
+/* Last-4 patterns, ordered by how much they mean. `g` is the capture index. */
+const LAST4_PATTERNS = [
+  // "ending with 1234", "ending in XX1234", "ends 1234"
+  {re:/\bend(?:ing|s|ed)?\s*(?:with|in|:)?\s*[-:]?\s*(?:[xX*•#]+\s*)?(\d{4})(?!\d)/gi, g:1},
+  // "last 4 digits 1234"
+  {re:/\blast\s*(?:4|four)\s*digits?\s*(?:is|are|:)?\s*(?:[xX*•#]+\s*)?(\d{4})(?!\d)/gi, g:1},
+  // masked runs: XX1234, ****1234, XXXXXXXXXXXX1234, x-1234
+  {re:/(^|[^A-Za-z0-9])([xX*•#]+)[\s-]?(\d{4})(?!\d)/g, g:3},
+  // "Card no. 1234", "A/c XXXXX1234", "Account number 1234"
+  {re:/\b(?:credit\s*card|debit\s*card|card|a\/c|ac|acct|account)\s*(?:no\.?|number|num|#)?\s*[:\-]?\s*(?:[xX*•#]+\s*)?(\d{4})(?!\d)/gi, g:1}
+];
+
+function extractLast4(text){
+  const out = [];
+  const t = String(text||'');
+  LAST4_PATTERNS.forEach(p=>{
+    const re = new RegExp(p.re.source, p.re.flags);
+    let m;
+    while ((m = re.exec(t)) !== null){
+      const d = m[p.g];
+      if (/^\d{4}$/.test(d) && out.indexOf(d) < 0) out.push(d);
+      if (m.index === re.lastIndex) re.lastIndex++;   // zero-width guard
+    }
+  });
+  return out;
+}
+
+function detectBank(text){
+  const t = String(text||'');
+  for (const b of BANKS) if (b.re.test(t)) return b;
+  return null;
+}
+
+/* Best-effort only — the job is card identification, not book-keeping. */
+function extractAmount(text){
+  const t = String(text||'');
+  const pats = [
+    /(?:INR|Rs\.?|₹)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i,
+    /([0-9][0-9,]*\.[0-9]{2})\s*(?:INR|Rs\b)/i
+  ];
+  for (const re of pats){
+    const m = t.match(re);
+    if (m){
+      const n = parseFloat(m[1].replace(/,/g,''));
+      if (isFinite(n) && n > 0) return {value:n, text:'₹' + m[1].replace(/^0+(?=\d)/,'')};
+    }
+  }
+  return null;
+}
+
+function extractDirection(text){
+  const t = String(text||'');
+  if (/\b(credited|received|refund(?:ed)?|deposit(?:ed)?|cashback)\b/i.test(t)) return 'credit';
+  if (/\b(debited|spent|withdrawn|paid|purchase|txn|transaction|charged|used\s+for)\b/i.test(t)) return 'debit';
+  return null;
+}
+
+function extractMerchant(text){
+  const t = String(text||'').replace(/\s+/g,' ');
+  const pats = [
+    /\bat\s+([A-Za-z0-9][A-Za-z0-9 &'’\-\.\/]{2,40}?)\s+(?:on|dated|for)\b/i,
+    /\btowards\s+([A-Za-z0-9][A-Za-z0-9 &'’\-\.\/]{2,40}?)(?:\s+on\b|[\.;,]|$)/i,
+    /\bto\s+VPA\s+([^\s;,]{3,40})/i,
+    /\bInfo\s*[:\-]\s*([^\.;\n]{3,40})/i,
+    /\bat\s+([A-Za-z0-9][A-Za-z0-9 &'’\-\.\/]{2,40}?)(?:[\.;,]|$)/i
+  ];
+  for (const re of pats){
+    const m = t.match(re);
+    if (m){
+      let s = m[1].trim().replace(/\s+/g,' ').replace(/[\.,;]+$/,'');
+      if (/^(?:your|the|an?|call|www|http)\b/i.test(s)) continue;   // \b matters: "AMAZON" starts with "a"
+      if (s.length >= 3) return clamp(s, 42);
+    }
+  }
+  return null;
+}
+
+function parseMessage(text){
+  return {
+    raw: String(text||''),
+    last4s: extractLast4(text),
+    bank: detectBank(text),
+    amount: extractAmount(text),
+    direction: extractDirection(text),
+    merchant: extractMerchant(text)
+  };
+}
+
+/* ───────────────────────── 4. match (pure) ───────────────────────── */
+/* Words that show up in every bank SMS ever written — matching on them would
+   make "Bank" alone look like evidence, so they carry no signal. */
+const BANK_STOPWORDS = ['bank','banks','card','cards','credit','debit','the','and',
+  'ltd','limited','pvt','account','small','finance','payments','payment','for','of'];
+const bankWords = s => String(s||'').toLowerCase().split(/[^a-z0-9]+/)
+  .filter(w => w.length >= 3 && BANK_STOPWORDS.indexOf(w) < 0);
+
+/* Does this card's own bank label show up in the message? Covers banks the
+   table above doesn't know about — the user typed "Suryoday", we look for it. */
+function cardBankInText(card, text){
+  const t = ' ' + String(text||'').toLowerCase() + ' ';
+  const words = bankWords(card.bank);
+  if (!words.length) return false;
+  return words.some(w => t.indexOf(w) >= 0);
+}
+function sameBank(card, bank){
+  if (!bank) return false;
+  const cb = card.bank.toLowerCase(), bn = bank.name.toLowerCase();
+  if (cb === bn) return true;
+  const bWords = bankWords(bn), cWords = bankWords(cb);
+  if (!bWords.length || !cWords.length) return false;
+  return bWords.some(w => cWords.some(c => c===w || c.indexOf(w)===0 || w.indexOf(c)===0));
+}
+
+/**
+ * Returns {status, matches, parsed}
+ *   status: 'confident' | 'multiple' | 'none'
+ *   matches: [{card, score, why[]}]  sorted best-first
+ */
+function identify(text, cards){
+  const parsed = parseMessage(text);
+  const {last4s, bank} = parsed;
+
+  const scored = [];
+  cards.forEach(card=>{
+    const idx = last4s.indexOf(card.last4);
+    const bankHit = sameBank(card, bank) || cardBankInText(card, parsed.raw);
+    const why = [];
+    let score = 0;
+
+    if (idx >= 0){
+      score += 100 - idx * 12;                   // first digits found matter most
+      why.push('Last 4 digits match');
+    } else if (!last4s.length && bankHit){
+      score += 30;                               // no digits at all, bank only
+      why.push('Bank matches');
+    } else {
+      return;                                    // not a candidate
+    }
+
+    if (idx >= 0 && bankHit){ score += 45; why.push('Bank matches'); }
+    // Digits match but the SMS names a different bank — keep it, flag it.
+    else if (idx >= 0 && bank && !bankHit){ score -= 45; why.push('Bank in the SMS looks different'); }
+
+    scored.push({card, score, why});
+  });
+
+  scored.sort((a,b)=> b.score - a.score || a.card.owner.localeCompare(b.card.owner));
+
+  if (!scored.length) return {status:'none', matches:[], parsed};
+  const top = scored[0].score;
+  const tier = scored.filter(s => s.score === top);
+  return {status: tier.length === 1 ? 'confident' : 'multiple', matches: scored, parsed,
+          weak: top < 60};
+}
+
+/* ───────────────────────── 5. ui ───────────────────────── */
+const state = {
+  tab: 'identify',
+  result: null,       // {status, matches, parsed, chosenId, histId}
+  draft: null,        // card being edited in the sheet
+  sheet: null,
+  pendingText: ''
+};
+
+/* — chrome — */
+function toast(msg, ms){
+  const el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>el.classList.remove('on'), ms || 2100);
+}
+function guard(fn){
+  return function(){
+    try{ return fn.apply(this, arguments); }
+    catch(e){ console.warn(e); toast(e && e.message ? e.message : 'Something went wrong'); }
+  };
+}
+function haptic(){ if (navigator.vibrate) { try{ navigator.vibrate(8); }catch(e){} } }
+
+const ICONS = {
+  identify:'<path d="M3.6 6.2h18.8M4.8 4h16.4a1.2 1.2 0 0 1 1.2 1.2v13.6a1.2 1.2 0 0 1-1.2 1.2H4.8a1.2 1.2 0 0 1-1.2-1.2V5.2A1.2 1.2 0 0 1 4.8 4Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6.6 15.4h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  cards:'<rect x="2.6" y="6.4" width="18.8" height="12.6" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6 3.6h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".55"/><path d="M2.6 10.4h18.8" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  history:'<circle cx="12" cy="12" r="8.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 7.4V12l3.2 2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
+  setup:'<circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.8v2.4M12 18.8v2.4M21.2 12h-2.4M5.2 12H2.8M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2 5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'
+};
+const CHEV = '<svg class="chev" viewBox="0 0 8 13" fill="none"><path d="M1.5 1.5 6.5 6.5 1.5 11.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+const TABS = [
+  {id:'identify', label:'Identify'},
+  {id:'cards',    label:'Cards'},
+  {id:'history',  label:'History'},
+  {id:'setup',    label:'Setup'}
+];
+
+function renderTabs(){
+  $('#tabbar').innerHTML = TABS.map(t=>`
+    <button class="tab ${state.tab===t.id?'on':''}" data-act="tab" data-id="${t.id}" aria-label="${t.label}">
+      <svg viewBox="0 0 24 24">${ICONS[t.id]}</svg><span>${t.label}</span>
+    </button>`).join('');
+}
+
+/* — screens — */
+function render(){
+  renderTabs();
+  const titles = {identify:'Card ID', cards:'Cards', history:'History', setup:'Setup'};
+  let action = '';
+  if (state.tab === 'cards')
+    action = `<button class="nav-btn strong" data-act="add-card">Add</button>`;
+  if (state.tab === 'history' && Store.history().length)
+    action = `<button class="nav-btn" data-act="clear-history">Clear</button>`;
+  $('#navRow').innerHTML = `<h1>${titles[state.tab]}</h1>${action}`;
+
+  const view = $('#view');
+  view.className = 'wrap fade';
+  view.innerHTML =
+    state.tab === 'identify' ? viewIdentify() :
+    state.tab === 'cards'    ? viewCards()    :
+    state.tab === 'history'  ? viewHistory()  : viewSetup();
+
+  // restore the textarea contents across re-renders
+  const ta = $('#pasteBox');
+  if (ta && state.pendingText) ta.value = state.pendingText;
+  void view.offsetWidth;
+}
+
+/* ---------- identify ---------- */
+function cardVisual(card, extra){
+  return `<div class="card-visual" style="background:${gradientOf(card.color)}">
+    <div class="cv-top">
+      <div>
+        <div class="cv-owner">${escapeHtml(card.owner)}</div>
+        <div class="cv-bank">${escapeHtml(card.bank)}</div>
+      </div>
+      <div class="cv-type">${card.type === 'credit' ? 'Credit' : 'Debit'}</div>
+    </div>
+    <div class="cv-num"><small>••••</small>${escapeHtml(card.last4)}</div>
+    ${card.nickname ? `<div class="cv-nick">${escapeHtml(card.nickname)}</div>` : ''}
+    ${extra || ''}
+  </div>`;
+}
+
+function factsRow(p){
+  const bits = [];
+  if (p.amount)   bits.push({k: p.direction==='credit'?'Credited':'Amount', v:p.amount.text, cls:'amt'});
+  if (p.merchant) bits.push({k:'Merchant', v:p.merchant});
+  if (p.bank)     bits.push({k:'Bank in SMS', v:p.bank.name});
+  if (!bits.length) return '';
+  return `<div class="facts">${bits.map(b=>
+    `<div class="fact"><div class="k">${escapeHtml(b.k)}</div>
+       <div class="v ${b.cls||''}">${escapeHtml(b.v)}</div></div>`).join('')}</div>`;
+}
+
+function viewIdentify(){
+  const cards = Store.cards();
+  let html = '';
+
+  if (state.result){
+    const r = state.result;
+    const chosen = r.chosenId ? r.matches.find(m=>m.card.id===r.chosenId) : null;
+    const top = chosen || r.matches[0];
+
+    if (r.status === 'confident' || chosen){
+      const weak = !chosen && r.weak;
+      html += `<div style="padding-top:10px">
+        <div class="verdict ${weak?'v-warn':'v-ok'}">
+          <span class="dot"></span>
+          <span class="txt">${weak ? 'Best guess' : 'Match found'}</span>
+        </div>
+        ${cardVisual(top.card)}
+        ${factsRow(r.parsed)}
+        <div class="note" style="padding-left:2px">${escapeHtml(top.why.join(' · '))}</div>
+      </div>`;
+      if (r.matches.length > 1){
+        html += `<div class="sect-h">Other possibilities</div><div class="group">
+          ${r.matches.filter(m=>m.card.id!==top.card.id).map(m=>cardRow(m.card,'pick')).join('')}
+        </div>`;
+      }
+    } else if (r.status === 'multiple'){
+      html += `<div style="padding-top:10px">
+        <div class="verdict v-warn"><span class="dot"></span>
+          <span class="txt">${r.matches.length} possible cards</span></div>
+        ${factsRow(r.parsed)}
+      </div>
+      <div class="sect-h">Which one is it?</div>
+      <div class="group">${r.matches.map(m=>cardRow(m.card,'pick')).join('')}</div>
+      <div class="note">Tap one to confirm it — the history entry updates too.</div>`;
+    } else {
+      const p = r.parsed;
+      const seen = p.last4s.length ? '••'+p.last4s[0] : null;
+      html += `<div style="padding-top:10px">
+        <div class="verdict v-bad"><span class="dot"></span><span class="txt">No match</span></div>
+        <div class="empty" style="padding:22px 12px 16px">
+          <div class="ico">🤷</div>
+          <h3>${seen ? 'Card '+escapeHtml(seen)+' isn’t saved' : 'Couldn’t find a card number'}</h3>
+          <p>${seen
+              ? 'None of your saved cards end in ' + escapeHtml(p.last4s[0]) + (p.bank ? ' at ' + escapeHtml(p.bank.name) : '') + '.'
+              : 'The message didn’t contain anything that looks like the last 4 digits of a card.'}</p>
+        </div>
+        ${factsRow(p)}
+        ${seen ? `<div class="btn-row"><button class="btn" data-act="add-from-msg">Add this card</button></div>` : ''}
+      </div>`;
+    }
+    html += `<div class="btn-row"><button class="btn ghost" data-act="clear-result">Clear result</button></div>`;
+  } else if (!cards.length){
+    html += `<div class="empty">
+      <div class="ico">💳</div>
+      <h3>No cards saved yet</h3>
+      <p>Add your cards first — then a forwarded bank SMS<br>tells you instantly whose card it was.</p>
+    </div>
+    <div class="btn-row"><button class="btn" data-act="add-card">Add your first card</button></div>`;
+  } else {
+    html += `<div class="empty">
+      <div class="ico">🔎</div>
+      <h3>Paste a bank SMS</h3>
+      <p>Or share one straight into the app with the iOS Shortcut.<br>${cards.length} card${cards.length>1?'s':''} saved.</p>
+    </div>`;
+  }
+
+  html += `<div class="sect-h">Message</div>
+    <textarea class="paste" id="pasteBox" placeholder="Paste the bank SMS here…"
+      autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+    <div class="btn-row">
+      <button class="btn" data-act="identify">Identify card</button>
+    </div>
+    <div class="btn-row" style="margin-top:6px">
+      <button class="btn ghost" data-act="sample">Try a sample message</button>
+    </div>`;
+  return html;
+}
+
+function cardRow(card, act){
+  return `<button class="row tappable" data-act="${act}" data-id="${escapeHtml(card.id)}">
+    <span class="chip" style="background:${gradientOf(card.color)}"></span>
+    <span class="grow">
+      <span class="ttl">${escapeHtml(card.owner)} · <span class="mono">••${escapeHtml(card.last4)}</span></span>
+      <span class="sub">${escapeHtml(card.bank)} ${card.type==='credit'?'credit':'debit'}${card.nickname? ' · '+escapeHtml(card.nickname):''}</span>
+    </span>
+    ${CHEV}
+  </button>`;
+}
+
+/* ---------- cards ---------- */
+function viewCards(){
+  const cards = Store.cards();
+  if (!cards.length){
+    return `<div class="empty" style="padding-top:60px">
+      <div class="ico">💳</div>
+      <h3>No cards yet</h3>
+      <p>Add a card and Card ID can start<br>recognising its messages.</p>
+    </div>
+    <div class="btn-row"><button class="btn" data-act="add-card">Add a card</button></div>`;
+  }
+  const byOwner = {};
+  cards.forEach(c=>{ (byOwner[c.owner] = byOwner[c.owner] || []).push(c); });
+  const owners = Object.keys(byOwner).sort((a,b)=>a.localeCompare(b));
+
+  let html = '';
+  owners.forEach(o=>{
+    const list = byOwner[o].sort((a,b)=> a.bank.localeCompare(b.bank) || a.last4.localeCompare(b.last4));
+    html += `<div class="sect-h">${escapeHtml(o)}</div><div class="group">
+      ${list.map(c=>`
+        <button class="row tappable" data-act="edit-card" data-id="${escapeHtml(c.id)}">
+          <span class="chip lg" style="background:${gradientOf(c.color)}"></span>
+          <span class="grow">
+            <span class="ttl">${escapeHtml(c.nickname || c.bank)}</span>
+            <span class="sub"><span class="mono">••${escapeHtml(c.last4)}</span> · ${c.nickname ? escapeHtml(c.bank) + ' · ' : ''}${c.type==='credit'?'Credit':'Debit'} card</span>
+          </span>${CHEV}
+        </button>`).join('')}
+    </div>`;
+  });
+  const dupes = duplicateLast4(cards);
+  if (dupes.length){
+    html += `<div class="note" style="margin-top:14px">Heads up: ${dupes.map(d=>'••'+escapeHtml(d)).join(', ')}
+      ${dupes.length>1?'are':'is'} used by more than one card. Card ID will use the bank name in the SMS to
+      tell them apart, and ask you if it can’t.</div>`;
+  }
+  html += `<div class="btn-row" style="margin-top:22px"><button class="btn sec" data-act="add-card">Add a card</button></div>`;
+  return html;
+}
+function duplicateLast4(cards){
+  const seen = {}, out = [];
+  cards.forEach(c=>{ seen[c.last4] = (seen[c.last4]||0)+1; });
+  Object.keys(seen).forEach(k=>{ if (seen[k] > 1) out.push(k); });
+  return out;
+}
+
+/* ---------- history ---------- */
+function viewHistory(){
+  const h = Store.history();
+  if (!h.length){
+    return `<div class="empty" style="padding-top:60px">
+      <div class="ico">🕘</div>
+      <h3>Nothing looked up yet</h3>
+      <p>Every message you identify gets logged here,<br>so you can scroll back through it later.</p>
+    </div>`;
+  }
+  const groups = {};
+  h.forEach(e=>{
+    const d = new Date(e.ts);
+    const key = d.toDateString();
+    (groups[key] = groups[key] || []).push(e);
+  });
+  const today = new Date().toDateString();
+  const yest  = new Date(Date.now()-86400000).toDateString();
+
+  return Object.keys(groups).map(key=>{
+    const label = key === today ? 'Today' : key === yest ? 'Yesterday'
+      : new Date(key).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:
+          new Date(key).getFullYear()===new Date().getFullYear()?undefined:'numeric'});
+    return `<div class="sect-h">${escapeHtml(label)}</div><div class="group">
+      ${groups[key].map(histRow).join('')}</div>`;
+  }).join('');
+}
+function histRow(e){
+  const card = e.cardId ? Store.cards().find(c=>c.id===e.cardId) : null;
+  const snap = card || e.card;                       // card may have been deleted since
+  const pending = !snap && e.status === 'multiple';
+  const title = snap ? `${snap.owner} · ••${snap.last4}`
+    : (pending ? 'Not picked · ••' + e.last4
+    : (e.last4 ? 'No match · ••' + e.last4 : 'No match'));
+  const sub = snap
+    ? `${snap.bank}${e.merchant ? ' · ' + e.merchant : ''}`
+    : (pending ? (e.matchCount || 2) + ' possible cards' + (e.merchant ? ' · ' + e.merchant : '')
+    : (e.merchant || e.bankName || 'No card recognised'));
+  return `<button class="row tappable hrow" data-act="hist" data-id="${escapeHtml(e.id)}">
+    <span class="chip" style="background:${snap ? gradientOf(snap.color) : 'var(--fill-2)'}"></span>
+    <span class="grow">
+      <span class="ttl">${escapeHtml(title)}</span>
+      <span class="sub">${escapeHtml(clamp(sub,44))} · ${escapeHtml(relTime(e.ts))}</span>
+    </span>
+    ${e.amount ? `<span class="amt ${e.direction==='credit'?'cr':''}">${e.direction==='credit'?'+':''}${escapeHtml(e.amount)}</span>` : ''}
+  </button>`;
+}
+
+/* ---------- setup ---------- */
+function appUrl(){
+  return location.origin + location.pathname;
+}
+function viewSetup(){
+  const p = Store.prefs();
+  const url = appUrl();
+  const themeBtn = (id,label)=>`<button class="${p.theme===id?'on':''}" data-act="theme" data-id="${id}">${label}</button>`;
+
+  return `
+  <div class="sect-h">iOS Shortcut</div>
+  <div class="group"><div class="field stack">
+    <div style="font-size:15px;line-height:1.5;color:var(--text-2);margin-bottom:14px">
+      Build this once and you can forward any bank SMS straight into Card ID from the
+      Share Sheet — it opens already showing whose card it was.
+    </div>
+    <ol class="steps">
+      <li>Open the <b>Shortcuts</b> app and tap <b>+</b> to make a new shortcut.</li>
+      <li>Tap the <b>ⓘ</b> (info) button at the bottom and turn on <b>Show in Share Sheet</b>.
+          Under <i>Share Sheet Types</i>, leave <b>Text</b> selected (turn the others off).</li>
+      <li>Add the action <b>Get Text from Input</b>. Set its input to <b>Shortcut Input</b>.</li>
+      <li>Add the action <b>URL Encode</b> (search for “URL Encode”, choose <i>Encode</i>)
+          and feed it the <b>Text</b> from the step above.</li>
+      <li>Add the action <b>Text</b> and type your app address followed by <code>?msg=</code>,
+          then insert the <b>URL Encoded Text</b> variable right after the <code>=</code>:
+          <div class="urlbox" style="margin-top:8px">${escapeHtml(url)}?msg=<span class="var">[URL&nbsp;Encoded&nbsp;Text]</span></div></li>
+      <li>Add the action <b>Open URLs</b> and give it that <b>Text</b>.</li>
+      <li>Name it something like <b>Which card?</b> and tap <b>Done</b>.</li>
+      <li>Now in Messages: press and hold the bank SMS → <b>Share</b> (or select the text and
+          share it) → pick <b>Which card?</b> from the Share Sheet.</li>
+    </ol>
+    <div style="font-size:13px;color:var(--text-2);line-height:1.45;margin-top:2px">
+      If the shortcut opens Safari instead of the home-screen app, that’s fine — it still works.
+      For the app-like feel, open this page in Safari and use <b>Share → Add to Home Screen</b> first.
+    </div>
+  </div></div>
+
+  <div class="sect-h">This app’s address</div>
+  <div class="group">
+    <div class="field stack"><div class="urlbox">${escapeHtml(url)}</div></div>
+    <button class="row tappable link center" data-act="copy-url">Copy address</button>
+  </div>
+  <div class="note">Use this exact address in the shortcut. If you host it on GitHub Pages, that’s the
+    <code class="inline">…github.io/…</code> URL.</div>
+
+  <div class="sect-h">Appearance</div>
+  <div class="group"><div class="field">
+    <label>Theme</label>
+    <div class="seg">${themeBtn('system','System')}${themeBtn('light','Light')}${themeBtn('dark','Dark')}</div>
+  </div></div>
+
+  <div class="sect-h">Your data</div>
+  <div class="group">
+    <div class="row"><span class="grow"><span class="ttl">Cards saved</span></span>
+      <span class="val">${Store.cards().length}</span></div>
+    <div class="row"><span class="grow"><span class="ttl">Lookups logged</span></span>
+      <span class="val">${Store.history().length}</span></div>
+    <button class="row tappable link center" data-act="export">Export a backup</button>
+    <button class="row tappable link center" data-act="import">Restore from a backup</button>
+  </div>
+  <div class="note">Everything is stored on this device only — no account, no server, nothing sent
+    anywhere. Clearing Safari’s website data for this site erases it, so keep a backup.</div>
+
+  <div class="sect-h">How matching works</div>
+  <div class="group"><div class="field stack">
+    <div style="font-size:14px;line-height:1.55;color:var(--text-2)">
+      Card ID pulls the last 4 digits out of the message — it understands
+      <code class="inline">XX1234</code>, <code class="inline">ending 1234</code>,
+      <code class="inline">ending with 1234</code> and
+      <code class="inline">card no. XXXXXXXXXXXX1234</code> — then looks for a bank name
+      (HDFC, ICICI, SBI, Axis, Kotak and about 40 others, plus whatever you typed as your own
+      bank names). If two of your cards share the same last 4 digits, the bank name decides.
+      If it still can’t tell, it asks you.
+    </div>
+  </div></div>
+
+  <div class="sect-h">About</div>
+  <div class="group"><div class="row"><span class="grow"><span class="ttl">Card ID</span>
+    <span class="sub">Local-first · single file · no backend</span></span></div></div>
+  <div style="height:20px"></div>`;
+}
+
+/* ───────────────────────── sheets ───────────────────────── */
+function openSheet(title, bodyHtml, rightBtn){
+  $('#sheetHead').innerHTML = `
+    <button class="nav-btn" data-act="close-sheet">Cancel</button>
+    <h2>${escapeHtml(title)}</h2>
+    ${rightBtn || '<span style="width:54px"></span>'}`;
+  $('#sheetBody').innerHTML = bodyHtml;
+  $('#scrim').classList.add('on');
+  $('#sheet').classList.add('on');
+  document.body.style.overflow = 'hidden';
+}
+function closeSheet(){
+  $('#scrim').classList.remove('on');
+  $('#sheet').classList.remove('on');
+  document.body.style.overflow = '';
+  state.sheet = null;
+  setTimeout(()=>{ if (!state.sheet) $('#sheetBody').innerHTML = ''; }, 320);
+}
+
+function openCardSheet(card){
+  state.sheet = 'card';
+  state.draft = normalizeCard(card || {color: COLORS[Store.cards().length % COLORS.length].id});
+  if (!card) state.draft.id = null;
+  const d = state.draft;
+  const isNew = !d.id;
+
+  openSheet(isNew ? 'Add card' : 'Edit card', `
+    <div class="sect-h">Card</div>
+    <div class="group">
+      <div class="field"><label>Bank</label>
+        <input id="f-bank" value="${escapeHtml(d.bank)}" placeholder="HDFC Bank" autocapitalize="words"
+          list="bankList" enterkeyhint="next"></div>
+      <div class="field"><label>Last 4</label>
+        <input id="f-last4" value="${escapeHtml(d.last4)}" placeholder="1234" inputmode="numeric"
+          maxlength="4" pattern="[0-9]*" class="mono"></div>
+      <div class="field"><label>Type</label>
+        <div class="seg">
+          <button data-act="f-type" data-id="credit" class="${d.type==='credit'?'on':''}">Credit</button>
+          <button data-act="f-type" data-id="debit"  class="${d.type==='debit'?'on':''}">Debit</button>
+        </div></div>
+    </div>
+
+    <div class="sect-h">Whose card</div>
+    <div class="group">
+      <div class="field"><label>Name</label>
+        <input id="f-owner" value="${escapeHtml(d.owner)}" placeholder="Mine / Dad / Priya"
+          autocapitalize="words" list="ownerList"></div>
+      <div class="field"><label>Nickname</label>
+        <input id="f-nick" value="${escapeHtml(d.nickname)}" placeholder="Optional — travel card"
+          autocapitalize="sentences"></div>
+    </div>
+
+    <div class="sect-h">Colour</div>
+    <div class="group"><div class="field stack">
+      <div class="swatches" id="swatches">
+        ${COLORS.map(c=>`<button class="sw ${d.color===c.id?'on':''}" data-act="f-color" data-id="${c.id}"
+           style="background:${gradientOf(c.id)}" aria-label="${c.name}"></button>`).join('')}
+      </div>
+    </div></div>
+
+    <datalist id="bankList">${BANKS.map(b=>`<option value="${escapeHtml(b.name)}">`).join('')}</datalist>
+    <datalist id="ownerList">${[...new Set(Store.cards().map(c=>c.owner))]
+        .map(o=>`<option value="${escapeHtml(o)}">`).join('')}</datalist>
+
+    <div style="padding:20px 16px 0">
+      <button class="btn" data-act="save-card">${isNew ? 'Add card' : 'Save changes'}</button>
+    </div>
+    ${!isNew ? `<div class="group" style="margin:22px 16px 0">
+      <button class="row tappable danger" data-act="delete-card" data-id="${escapeHtml(d.id)}">Delete card</button>
+    </div>` : ''}
+    <div style="height:24px"></div>
+  `);
+  setTimeout(()=>{ const el = $('#f-bank'); if (isNew && el) el.focus(); }, 340);
+}
+
+function readCardForm(){
+  const d = state.draft || {};
+  return {
+    id: d.id || null,
+    bank: ($('#f-bank')||{}).value || '',
+    last4: ($('#f-last4')||{}).value || '',
+    owner: ($('#f-owner')||{}).value || '',
+    nickname: ($('#f-nick')||{}).value || '',
+    type: d.type,
+    color: d.color,
+    createdAt: d.createdAt
+  };
+}
+
+function openHistSheet(id){
+  const e = Store.history().find(x=>x.id===id);
+  if (!e) return;
+  state.sheet = 'hist';
+  const card = e.cardId ? Store.cards().find(c=>c.id===e.cardId) : null;
+  const snap = card || e.card;
+
+  openSheet('Lookup', `
+    <div style="padding:16px 16px 0">
+      ${snap ? cardVisual(snap) : `<div class="empty" style="padding:20px">
+         <div class="ico">${e.status === 'multiple' ? '🤔' : '🤷'}</div>
+         <h3>${e.status === 'multiple' ? 'Never picked a card' : 'No card matched'}</h3>
+         <p>${e.status === 'multiple'
+              ? 'More than one of your cards ends in ' + escapeHtml(e.last4 || '') + '. Identify it again to choose.'
+              : (e.last4 ? 'The message mentioned ••' + escapeHtml(e.last4) + '.' : 'No card number was found in the message.')}</p></div>`}
+      ${!card && e.card ? `<div class="note" style="padding-left:2px">This card has since been deleted.</div>` : ''}
+    </div>
+    <div class="sect-h">Details</div>
+    <div class="group">
+      <div class="row"><span class="grow"><span class="ttl">When</span></span>
+        <span class="val">${escapeHtml(fullTime(e.ts))}</span></div>
+      ${e.amount ? `<div class="row"><span class="grow"><span class="ttl">Amount</span></span>
+        <span class="val">${e.direction==='credit'?'+':''}${escapeHtml(e.amount)}</span></div>` : ''}
+      ${e.merchant ? `<div class="row"><span class="grow"><span class="ttl">Merchant</span></span>
+        <span class="val">${escapeHtml(clamp(e.merchant,24))}</span></div>` : ''}
+      ${e.bankName ? `<div class="row"><span class="grow"><span class="ttl">Bank in SMS</span></span>
+        <span class="val">${escapeHtml(e.bankName)}</span></div>` : ''}
+      ${e.last4 ? `<div class="row"><span class="grow"><span class="ttl">Digits found</span></span>
+        <span class="val mono">${escapeHtml(e.last4)}</span></div>` : ''}
+    </div>
+    <div class="sect-h">Message</div>
+    <div style="padding:0 16px"><div class="raw">${escapeHtml(e.raw||'')}</div></div>
+    <div style="padding:20px 16px 0">
+      <button class="btn sec" data-act="reparse" data-id="${escapeHtml(e.id)}">Identify again</button>
+    </div>
+    <div class="group" style="margin:14px 16px 0">
+      <button class="row tappable danger" data-act="delete-hist" data-id="${escapeHtml(e.id)}">Delete this entry</button>
+    </div>
+    <div style="height:24px"></div>
+  `);
+}
+
+/* ───────────────────────── actions ───────────────────────── */
+function runIdentify(text, opts){
+  opts = opts || {};
+  const t = String(text||'').trim();
+  if (!t){ toast('Paste a message first'); return; }
+  state.pendingText = t;
+
+  const cards = Store.cards();
+  const r = identify(t, cards);
+  r.chosenId = null;
+
+  const top = r.status === 'confident' ? r.matches[0] : null;
+  const entry = {
+    raw: t,
+    cardId: top ? top.card.id : null,
+    card: top ? Object.assign({}, top.card) : null,
+    last4: r.parsed.last4s[0] || null,
+    bankName: r.parsed.bank ? r.parsed.bank.name : null,
+    amount: r.parsed.amount ? r.parsed.amount.text : null,
+    direction: r.parsed.direction,
+    merchant: r.parsed.merchant,
+    status: r.status,
+    matchCount: r.matches.length
+  };
+  const logged = Store.logLookup(entry);
+  r.histId = logged.id;
+
+  state.result = r;
+  state.tab = 'identify';
+  render();
+  window.scrollTo({top:0, behavior: opts.silent ? 'auto' : 'smooth'});
+  if (r.status === 'confident') haptic();
+}
+
+function chooseMatch(cardId){
+  const r = state.result;
+  if (!r) return;
+  const m = r.matches.find(x=>x.card.id===cardId);
+  if (!m) return;
+  r.chosenId = cardId;
+  if (r.histId) Store.updateLookup(r.histId, {cardId:m.card.id, card:Object.assign({},m.card), status:'confirmed'});
+  render();
+  haptic();
+  toast('Set to ' + m.card.owner + '’s card');
+}
+
+const SAMPLE = "Dear Customer, Rs.2,499.00 has been debited from your HDFC Bank Card XX4821 on 12-03-25 at SWIGGY BANGALORE. Not you? Call 18002586161.";
+
+document.addEventListener('click', guard(function(ev){
+  const el = ev.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act, id = el.dataset.id;
+
+  switch(act){
+    case 'tab':
+      if (state.tab !== id){ state.tab = id; render(); window.scrollTo(0,0); }
+      break;
+
+    case 'identify': {
+      const ta = $('#pasteBox');
+      runIdentify(ta ? ta.value : '');
+      if (ta) ta.blur();
+      break;
+    }
+    case 'sample': {
+      const ta = $('#pasteBox');
+      if (ta) ta.value = SAMPLE;
+      runIdentify(SAMPLE);
+      break;
+    }
+    case 'clear-result':
+      state.result = null; state.pendingText = '';
+      render(); window.scrollTo(0,0);
+      break;
+    case 'pick': chooseMatch(id); break;
+
+    case 'add-from-msg': {
+      const p = state.result ? state.result.parsed : null;
+      openCardSheet({
+        last4: p && p.last4s[0] ? p.last4s[0] : '',
+        bank: p && p.bank ? p.bank.name : '',
+        color: COLORS[Store.cards().length % COLORS.length].id
+      });
+      break;
+    }
+
+    case 'add-card': openCardSheet(null); break;
+    case 'edit-card': {
+      const c = Store.cards().find(x=>x.id===id);
+      if (c) openCardSheet(c);
+      break;
+    }
+    case 'f-type':
+      state.draft.type = id;
+      el.parentElement.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.id===id));
+      break;
+    case 'f-color':
+      state.draft.color = id;
+      document.querySelectorAll('#swatches .sw').forEach(b=>b.classList.toggle('on', b.dataset.id===id));
+      break;
+    case 'save-card': {
+      const saved = Store.saveCard(readCardForm());
+      closeSheet();
+      // If a result is on screen, re-run it — the new card may now be the answer.
+      if (state.pendingText && state.result){ runIdentify(state.pendingText, {silent:true}); }
+      else { state.tab = 'cards'; render(); }
+      toast(saved.owner + '’s card saved');
+      break;
+    }
+    case 'delete-card': {
+      const c = Store.cards().find(x=>x.id===id);
+      if (!c) break;
+      if (!confirm('Delete ' + c.owner + '’s ' + c.bank + ' ••' + c.last4 + '?\n\nPast history entries keep a record of it.')) break;
+      Store.removeCard(id);
+      closeSheet();
+      if (state.result && state.pendingText) runIdentify(state.pendingText, {silent:true});
+      else render();
+      toast('Card deleted');
+      break;
+    }
+
+    case 'hist': openHistSheet(id); break;
+    case 'delete-hist':
+      Store.removeLookup(id); closeSheet(); render(); toast('Entry deleted');
+      break;
+    case 'reparse': {
+      const e = Store.history().find(x=>x.id===id);
+      closeSheet();
+      if (e) setTimeout(()=>runIdentify(e.raw), 260);
+      break;
+    }
+    case 'clear-history':
+      if (!confirm('Clear all ' + Store.history().length + ' logged lookups?')) break;
+      Store.clearHistory(); render(); toast('History cleared');
+      break;
+
+    case 'theme': applyTheme(id, true); render(); break;
+    case 'copy-url': copyText(appUrl()); break;
+    case 'export': doExport(); break;
+    case 'import': doImport(); break;
+
+    case 'close-sheet': closeSheet(); break;
+  }
+}));
+
+$('#scrim').addEventListener('click', ()=>closeSheet());
+document.addEventListener('keydown', e=>{
+  if (e.key === 'Escape' && state.sheet) closeSheet();
+  if ((e.metaKey||e.ctrlKey) && e.key === 'Enter'){
+    const ta = $('#pasteBox');
+    if (ta && document.activeElement === ta) runIdentify(ta.value);
+  }
+});
+document.addEventListener('input', e=>{
+  if (e.target && e.target.id === 'pasteBox') state.pendingText = e.target.value;
+  if (e.target && e.target.id === 'f-last4') e.target.value = e.target.value.replace(/\D/g,'').slice(0,4);
+});
+window.addEventListener('scroll', ()=>{
+  $('#nav').classList.toggle('scrolled', window.scrollY > 4);
+}, {passive:true});
+
+/* — backup — */
+function copyText(t){
+  const done = ()=>toast('Copied');
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(done, ()=>fallback());
+  } else fallback();
+  function fallback(){
+    const ta = document.createElement('textarea');
+    ta.value = t; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); done(); }catch(e){ toast('Copy failed — select it manually'); }
+    document.body.removeChild(ta);
+  }
+}
+function doExport(){
+  const data = JSON.stringify(Store.exportAll(), null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'card-id-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  toast('Backup downloaded');
+}
+function doImport(){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/json,.json';
+  inp.onchange = guard(function(){
+    const f = inp.files && inp.files[0];
+    if (!f) return;
+    const fr = new FileReader();
+    fr.onload = guard(function(){
+      const data = JSON.parse(String(fr.result));
+      const mode = confirm('OK = merge into what you already have.\nCancel = replace everything with the backup.')
+        ? 'merge' : 'replace';
+      const res = Store.importAll(data, mode);
+      render();
+      toast(mode === 'merge' ? res.cards + ' card' + (res.cards===1?'':'s') + ' added' : 'Backup restored');
+    });
+    fr.readAsText(f);
+  });
+  inp.click();
+}
+
+/* — theme — */
+function applyTheme(mode, persist){
+  if (persist) Store.setPref('theme', mode);
+  const root = document.documentElement;
+  if (mode === 'system') root.removeAttribute('data-theme');
+  else root.setAttribute('data-theme', mode);
+  const dark = mode === 'dark' ||
+    (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', dark ? '#161618' : '#f9f9fb');
+}
+if (window.matchMedia){
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', ()=>{
+    if (Store.prefs().theme === 'system') applyTheme('system', false);
+  });
+}
+
+/* — home-screen icon (drawn once, so the file stays self-contained) — */
+function makeIcon(){
+  try{
+    const s = 512, c = document.createElement('canvas');
+    c.width = c.height = s;
+    const x = c.getContext('2d');
+    const g = x.createLinearGradient(0,0,s,s);
+    g.addColorStop(0,'#3AA0FF'); g.addColorStop(1,'#0056D6');
+    x.fillStyle = g; x.fillRect(0,0,s,s);
+    // card
+    x.fillStyle = 'rgba(255,255,255,.96)';
+    const w = 320, h = 210, rx = (s-w)/2, ry = (s-h)/2 + 6, r = 34;
+    x.beginPath();
+    x.moveTo(rx+r,ry); x.arcTo(rx+w,ry,rx+w,ry+h,r); x.arcTo(rx+w,ry+h,rx,ry+h,r);
+    x.arcTo(rx,ry+h,rx,ry,r); x.arcTo(rx,ry,rx+w,ry,r); x.closePath(); x.fill();
+    x.fillStyle = 'rgba(0,86,214,.20)';
+    x.fillRect(rx, ry+38, w, 34);
+    x.fillStyle = '#0056D6';
+    x.font = '700 74px -apple-system,SF Pro Display,Helvetica,Arial,sans-serif';
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText('ID', s/2, ry + h - 62);
+    const url = c.toDataURL('image/png');
+    const link = document.getElementById('appleIcon');
+    if (link) link.href = url;
+    return url;
+  }catch(e){ return null; }
+}
+function installManifest(){
+  try{
+    const icon = makeIcon();
+    const mf = {
+      name:'Card ID', short_name:'Card ID', start_url:'./', scope:'./',
+      display:'standalone', orientation:'portrait',
+      background_color:'#f2f2f7', theme_color:'#f9f9fb',
+      description:'Identify which of your cards a bank SMS belongs to.',
+      icons: icon ? [{src:icon, sizes:'512x512', type:'image/png', purpose:'any'}] : []
+    };
+    const blob = new Blob([JSON.stringify(mf)], {type:'application/manifest+json'});
+    const link = document.createElement('link');
+    link.rel = 'manifest'; link.href = URL.createObjectURL(blob);
+    document.head.appendChild(link);
+  }catch(e){ /* icons are a nicety, never a blocker */ }
+}
+
+/* — incoming message from the Shortcut — */
+function incomingMessage(){
+  let msg = null;
+  try{
+    const q = new URLSearchParams(location.search);
+    msg = q.get('msg') || q.get('text') || q.get('sms') || q.get('m');
+    if (!msg && location.hash.length > 1){
+      const h = new URLSearchParams(location.hash.slice(1));
+      msg = h.get('msg') || h.get('text');
+    }
+  }catch(e){}
+  return msg && msg.trim() ? msg.trim() : null;
+}
+
+/* — boot — */
+function boot(){
+  applyTheme(Store.prefs().theme, false);
+  installManifest();
+
+  const msg = incomingMessage();
+  render();
+
+  if (msg){
+    runIdentify(msg, {silent:true});
+    // Drop the query string so a refresh (or Add to Home Screen) doesn't re-fire it.
+    try{ history.replaceState(null, '', location.pathname); }catch(e){}
+  }
+}
+
+/* Tiny self-check of the parsing rules — logs to the console, never to the UI.
+   Add ?selftest=1 to the URL to run it. */
+function selftest(){
+  const cases = [
+    ['Rs.2499 debited from HDFC Bank Card XX4821 on 12-03-25 at SWIGGY', '4821', 'HDFC Bank'],
+    ['Your ICICI Bank Credit Card XX1009 has been used for Rs 560', '1009', 'ICICI Bank'],
+    ['INR 1,200.00 spent on your SBI Credit Card ending 7788 at AMAZON', '7788', 'SBI'],
+    ['Axis Bank: Card no. XXXXXXXXXXXX3344 debited by Rs.99', '3344', 'Axis Bank'],
+    ['Kotak: Acct XX9012 credited with Rs 5,000 by NEFT', '9012', 'Kotak'],
+    ['Dear Cust, a/c ending with 5566 debited Rs.310 - Yes Bank', '5566', 'Yes Bank'],
+    ['Amount of Rs 250 debited from card ****2233 - IDFC FIRST Bank', '2233', 'IDFC First'],
+    ['Txn of INR 899 on your Amazon Pay ICICI card XX7001 at BIGBASKET', '7001', 'Amazon Pay ICICI']
+  ];
+  let pass = 0;
+  cases.forEach(([sms, want4, wantBank])=>{
+    const p = parseMessage(sms);
+    const ok4 = p.last4s.indexOf(want4) >= 0;
+    const okB = p.bank && p.bank.name === wantBank;
+    if (ok4 && okB) pass++;
+    else console.warn('selftest miss:', sms, '→', p.last4s, p.bank && p.bank.name, '(wanted', want4, wantBank + ')');
+  });
+  console.log('Card ID selftest: ' + pass + '/' + cases.length + ' passed');
+}
+
+boot();
+if (/[?&]selftest=1/.test(location.search) || location.hash === '#selftest') selftest();
+</script>
+</body>
+</html>
