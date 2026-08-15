@@ -1103,8 +1103,11 @@ function closeSheet(){
 
 function openCardSheet(card){
   state.sheet = 'card';
+  // A prefill object (e.g. from "Add this card" on an unmatched SMS) has no id of
+  // its own — normalizeCard would mint one anyway, so capture the real id first.
+  const editingId = card && card.id ? card.id : null;
   state.draft = normalizeCard(card || {color: COLORS[Store.cards().length % COLORS.length].id});
-  if (!card) state.draft.id = null;
+  state.draft.id = editingId;
   const d = state.draft;
   const isNew = !d.id;
 
