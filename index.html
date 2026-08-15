@@ -499,9 +499,10 @@ function normalizeCard(c){
   c = c || {};
   return {
     id: c.id || uid('c_'),
+    kind: c.kind === 'account' ? 'account' : 'card',   // plain bank/UPI account, no card attached
     bank: String(c.bank||'').trim(),
     last4: String(c.last4||'').replace(/\D/g,'').slice(-4),
-    type: c.type === 'debit' ? 'debit' : 'credit',
+    type: c.type === 'debit' ? 'debit' : 'credit',      // only shown/used when kind==='card'
     owner: String(c.owner||'').trim(),
     nickname: String(c.nickname||'').trim(),
     color: COLORS.some(x=>x.id===c.color) ? c.color : 'blue',
@@ -514,7 +515,7 @@ function validateCard(input){
   c.id = input.id || null;
   if (!c.bank) throw new Error('Bank name is required');
   if (!/^\d{4}$/.test(c.last4)) throw new Error('Last 4 digits must be exactly 4 numbers');
-  if (!c.owner) throw new Error('Whose card it is, is required');
+  if (!c.owner) throw new Error((c.kind==='account' ? 'Whose account' : 'Whose card') + ' it is, is required');
   return c;
 }
 
@@ -551,7 +552,7 @@ const BANKS = [
   {id:'equitas', name:'Equitas',           re:/\bequitas\b/i},
   {id:'ujjivan', name:'Ujjivan',           re:/\bujjivan\b/i},
   {id:'hsbc',    name:'HSBC',              re:/\bhsbc\b/i},
-  {id:'citi',    name:'Citi',              re:/\bciti\w*/i},
+  {id:'citi',    name:'Citi',              re:/\bciti(?:bank|group|corp)?\b/i},
   {id:'amex',    name:'American Express',  re:/\bamex\b|american\s*express/i},
   {id:'dbs',     name:'DBS',               re:/\bdbs\b|\bdigibank\b/i},
   {id:'deutsche',name:'Deutsche Bank',     re:/deutsche/i},
@@ -602,8 +603,9 @@ function detectBank(text){
 function extractAmount(text){
   const t = String(text||'');
   const pats = [
-    /(?:INR|Rs\.?|₹)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i,
-    /([0-9][0-9,]*\.[0-9]{2})\s*(?:INR|Rs\b)/i
+    // \b on Rs/INR matters — without it "within 24 hrs 5000" reads as ₹5000.
+    /(?:\bINR|\bRs\.?|₹)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i,
+    /([0-9][0-9,]*\.[0-9]{2})\s*(?:\bINR\b|\bRs\b)/i
   ];
   for (const re of pats){
     const m = t.match(re);
@@ -619,6 +621,17 @@ function extractDirection(text){
   const t = String(text||'');
   if (/\b(credited|received|refund(?:ed)?|deposit(?:ed)?|cashback)\b/i.test(t)) return 'credit';
   if (/\b(debited|spent|withdrawn|paid|purchase|txn|transaction|charged|used\s+for)\b/i.test(t)) return 'debit';
+  return null;
+}
+
+/* Is this SMS about a card swipe or about the account itself? Returns null when
+   it says both or neither — only a hint, never the deciding factor. */
+function guessKind(text){
+  const t = String(text||'');
+  const saysCard = /\bcards?\b/i.test(t);
+  const saysAccount = /\b(a\/c|ac|acct|account)\b/i.test(t) || /\bupi\b/i.test(t);
+  if (saysAccount && !saysCard) return 'account';
+  if (saysCard && !saysAccount) return 'card';
   return null;
 }
 
@@ -657,17 +670,23 @@ function parseMessage(text){
 /* Words that show up in every bank SMS ever written — matching on them would
    make "Bank" alone look like evidence, so they carry no signal. */
 const BANK_STOPWORDS = ['bank','banks','card','cards','credit','debit','the','and',
-  'ltd','limited','pvt','account','small','finance','payments','payment','for','of'];
+  'ltd','limited','pvt','account','small','finance','payments','payment','for','of',
+  'money','pay','wallet','banking','savings','current','india','net'];
 const bankWords = s => String(s||'').toLowerCase().split(/[^a-z0-9]+/)
   .filter(w => w.length >= 3 && BANK_STOPWORDS.indexOf(w) < 0);
+
+/* Anchored at a word START, not anywhere: "SBI" should still hit the sender id
+   "VM-SBICRD", but "One" must not hit the middle of "phone" or "money". */
+const escapeRe = w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const bankWordRe = w => new RegExp('(?:^|[^a-z0-9])' + escapeRe(w), 'i');
 
 /* Does this card's own bank label show up in the message? Covers banks the
    table above doesn't know about — the user typed "Suryoday", we look for it. */
 function cardBankInText(card, text){
-  const t = ' ' + String(text||'').toLowerCase() + ' ';
+  const t = String(text||'').toLowerCase();
   const words = bankWords(card.bank);
   if (!words.length) return false;
-  return words.some(w => t.indexOf(w) >= 0);
+  return words.some(w => bankWordRe(w).test(t));
 }
 function sameBank(card, bank){
   if (!bank) return false;
@@ -686,6 +705,7 @@ function sameBank(card, bank){
 function identify(text, cards){
   const parsed = parseMessage(text);
   const {last4s, bank} = parsed;
+  const kindHint = guessKind(parsed.raw);   // 'card' | 'account' | null
 
   const scored = [];
   cards.forEach(card=>{
@@ -693,6 +713,7 @@ function identify(text, cards){
     const bankHit = sameBank(card, bank) || cardBankInText(card, parsed.raw);
     const why = [];
     let score = 0;
+    let shaky = false;   // "we matched something, but don't fully trust it"
 
     if (idx >= 0){
       score += 100 - idx * 12;                   // first digits found matter most
@@ -700,15 +721,25 @@ function identify(text, cards){
     } else if (!last4s.length && bankHit){
       score += 30;                               // no digits at all, bank only
       why.push('Bank matches');
+      shaky = true;
     } else {
       return;                                    // not a candidate
     }
 
     if (idx >= 0 && bankHit){ score += 45; why.push('Bank matches'); }
     // Digits match but the SMS names a different bank — keep it, flag it.
-    else if (idx >= 0 && bank && !bankHit){ score -= 45; why.push('Bank in the SMS looks different'); }
+    else if (idx >= 0 && bank && !bankHit){
+      score -= 45; shaky = true; why.push('Bank in the SMS looks different');
+    }
 
-    scored.push({card, score, why});
+    // Small nudge only — enough to break a tie between a card and an account
+    // sharing the same digits, never enough to outweigh the bank.
+    if (kindHint && card.kind === kindHint){
+      score += 8;
+      why.push(kindHint === 'account' ? 'Reads like an account message' : 'Reads like a card message');
+    }
+
+    scored.push({card, score, why, shaky});
   });
 
   scored.sort((a,b)=> b.score - a.score || a.card.owner.localeCompare(b.card.owner));
@@ -716,8 +747,10 @@ function identify(text, cards){
   if (!scored.length) return {status:'none', matches:[], parsed};
   const top = scored[0].score;
   const tier = scored.filter(s => s.score === top);
+  // "Best guess" is about the quality of the evidence, not the size of the score —
+  // tying it to a threshold made unrelated tweaks silently flip the label.
   return {status: tier.length === 1 ? 'confident' : 'multiple', matches: scored, parsed,
-          weak: top < 60};
+          weak: !!scored[0].shaky};
 }
 
 /* ───────────────────────── 5. ui ───────────────────────── */
@@ -799,7 +832,7 @@ function cardVisual(card, extra){
         <div class="cv-owner">${escapeHtml(card.owner)}</div>
         <div class="cv-bank">${escapeHtml(card.bank)}</div>
       </div>
-      <div class="cv-type">${card.type === 'credit' ? 'Credit' : 'Debit'}</div>
+      <div class="cv-type">${card.kind === 'account' ? 'Account' : (card.type === 'credit' ? 'Credit' : 'Debit')}</div>
     </div>
     <div class="cv-num"><small>••••</small>${escapeHtml(card.last4)}</div>
     ${card.nickname ? `<div class="cv-nick">${escapeHtml(card.nickname)}</div>` : ''}
@@ -846,7 +879,7 @@ function viewIdentify(){
     } else if (r.status === 'multiple'){
       html += `<div style="padding-top:10px">
         <div class="verdict v-warn"><span class="dot"></span>
-          <span class="txt">${r.matches.length} possible cards</span></div>
+          <span class="txt">${r.matches.length} possible matches</span></div>
         ${factsRow(r.parsed)}
       </div>
       <div class="sect-h">Which one is it?</div>
@@ -859,28 +892,28 @@ function viewIdentify(){
         <div class="verdict v-bad"><span class="dot"></span><span class="txt">No match</span></div>
         <div class="empty" style="padding:22px 12px 16px">
           <div class="ico">🤷</div>
-          <h3>${seen ? 'Card '+escapeHtml(seen)+' isn’t saved' : 'Couldn’t find a card number'}</h3>
+          <h3>${seen ? escapeHtml(seen)+' isn’t saved' : 'Couldn’t find an account number'}</h3>
           <p>${seen
-              ? 'None of your saved cards end in ' + escapeHtml(p.last4s[0]) + (p.bank ? ' at ' + escapeHtml(p.bank.name) : '') + '.'
-              : 'The message didn’t contain anything that looks like the last 4 digits of a card.'}</p>
+              ? 'None of your saved cards or accounts end in ' + escapeHtml(p.last4s[0]) + (p.bank ? ' at ' + escapeHtml(p.bank.name) : '') + '.'
+              : 'The message didn’t contain anything that looks like the last 4 digits of a card or account.'}</p>
         </div>
         ${factsRow(p)}
-        ${seen ? `<div class="btn-row"><button class="btn" data-act="add-from-msg">Add this card</button></div>` : ''}
+        ${seen ? `<div class="btn-row"><button class="btn" data-act="add-from-msg">Add card or account</button></div>` : ''}
       </div>`;
     }
     html += `<div class="btn-row"><button class="btn ghost" data-act="clear-result">Clear result</button></div>`;
   } else if (!cards.length){
     html += `<div class="empty">
       <div class="ico">💳</div>
-      <h3>No cards saved yet</h3>
-      <p>Add your cards first — then a forwarded bank SMS<br>tells you instantly whose card it was.</p>
+      <h3>Nothing saved yet</h3>
+      <p>Add a card or a plain bank account first — then a forwarded<br>bank SMS tells you instantly whose it was.</p>
     </div>
-    <div class="btn-row"><button class="btn" data-act="add-card">Add your first card</button></div>`;
+    <div class="btn-row"><button class="btn" data-act="add-card">Add your first one</button></div>`;
   } else {
     html += `<div class="empty">
       <div class="ico">🔎</div>
       <h3>Paste a bank SMS</h3>
-      <p>Or share one straight into the app with the iOS Shortcut.<br>${cards.length} card${cards.length>1?'s':''} saved.</p>
+      <p>Or share one straight into the app with the iOS Shortcut.<br>${cards.length} saved.</p>
     </div>`;
   }
 
@@ -888,7 +921,7 @@ function viewIdentify(){
     <textarea class="paste" id="pasteBox" placeholder="Paste the bank SMS here…"
       autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
     <div class="btn-row">
-      <button class="btn" data-act="identify">Identify card</button>
+      <button class="btn" data-act="identify">Identify</button>
     </div>
     <div class="btn-row" style="margin-top:6px">
       <button class="btn ghost" data-act="sample">Try a sample message</button>
@@ -901,7 +934,7 @@ function cardRow(card, act){
     <span class="chip" style="background:${gradientOf(card.color)}"></span>
     <span class="grow">
       <span class="ttl">${escapeHtml(card.owner)} · <span class="mono">••${escapeHtml(card.last4)}</span></span>
-      <span class="sub">${escapeHtml(card.bank)} ${card.type==='credit'?'credit':'debit'}${card.nickname? ' · '+escapeHtml(card.nickname):''}</span>
+      <span class="sub">${escapeHtml(card.bank)} ${card.kind==='account'?'account':(card.type==='credit'?'credit':'debit')}${card.nickname? ' · '+escapeHtml(card.nickname):''}</span>
     </span>
     ${CHEV}
   </button>`;
@@ -913,10 +946,10 @@ function viewCards(){
   if (!cards.length){
     return `<div class="empty" style="padding-top:60px">
       <div class="ico">💳</div>
-      <h3>No cards yet</h3>
-      <p>Add a card and Card ID can start<br>recognising its messages.</p>
+      <h3>Nothing saved yet</h3>
+      <p>Add a card, or a plain bank/UPI account,<br>and Card ID can start recognising its messages.</p>
     </div>
-    <div class="btn-row"><button class="btn" data-act="add-card">Add a card</button></div>`;
+    <div class="btn-row"><button class="btn" data-act="add-card">Add one</button></div>`;
   }
   const byOwner = {};
   cards.forEach(c=>{ (byOwner[c.owner] = byOwner[c.owner] || []).push(c); });
@@ -931,7 +964,7 @@ function viewCards(){
           <span class="chip lg" style="background:${gradientOf(c.color)}"></span>
           <span class="grow">
             <span class="ttl">${escapeHtml(c.nickname || c.bank)}</span>
-            <span class="sub"><span class="mono">••${escapeHtml(c.last4)}</span> · ${c.nickname ? escapeHtml(c.bank) + ' · ' : ''}${c.type==='credit'?'Credit':'Debit'} card</span>
+            <span class="sub"><span class="mono">••${escapeHtml(c.last4)}</span> · ${c.nickname ? escapeHtml(c.bank) + ' · ' : ''}${c.kind==='account' ? 'Bank account' : (c.type==='credit'?'Credit':'Debit') + ' card'}</span>
           </span>${CHEV}
         </button>`).join('')}
     </div>`;
@@ -939,10 +972,10 @@ function viewCards(){
   const dupes = duplicateLast4(cards);
   if (dupes.length){
     html += `<div class="note" style="margin-top:14px">Heads up: ${dupes.map(d=>'••'+escapeHtml(d)).join(', ')}
-      ${dupes.length>1?'are':'is'} used by more than one card. Card ID will use the bank name in the SMS to
-      tell them apart, and ask you if it can’t.</div>`;
+      ${dupes.length>1?'are':'is'} used by more than one saved entry. Card ID will use the bank name in the SMS
+      to tell them apart, and ask you if it can’t.</div>`;
   }
-  html += `<div class="btn-row" style="margin-top:22px"><button class="btn sec" data-act="add-card">Add a card</button></div>`;
+  html += `<div class="btn-row" style="margin-top:22px"><button class="btn sec" data-act="add-card">Add a card or account</button></div>`;
   return html;
 }
 function duplicateLast4(cards){
@@ -971,16 +1004,21 @@ function viewHistory(){
   const today = new Date().toDateString();
   const yest  = new Date(Date.now()-86400000).toDateString();
 
+  // Read the cards once, not once per row — at the 500-entry cap that was 500
+  // localStorage reads and JSON.parses for a single render.
+  const byId = {};
+  Store.cards().forEach(c=>{ byId[c.id] = c; });
+
   return Object.keys(groups).map(key=>{
     const label = key === today ? 'Today' : key === yest ? 'Yesterday'
       : new Date(key).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:
           new Date(key).getFullYear()===new Date().getFullYear()?undefined:'numeric'});
     return `<div class="sect-h">${escapeHtml(label)}</div><div class="group">
-      ${groups[key].map(histRow).join('')}</div>`;
+      ${groups[key].map(e=>histRow(e, byId)).join('')}</div>`;
   }).join('');
 }
-function histRow(e){
-  const card = e.cardId ? Store.cards().find(c=>c.id===e.cardId) : null;
+function histRow(e, byId){
+  const card = e.cardId ? (byId ? byId[e.cardId] : Store.cards().find(c=>c.id===e.cardId)) : null;
   const snap = card || e.card;                       // card may have been deleted since
   const pending = !snap && e.status === 'multiple';
   const title = snap ? `${snap.owner} · ••${snap.last4}`
@@ -1054,7 +1092,9 @@ function viewSetup(){
   <div class="sect-h">Your data</div>
   <div class="group">
     <div class="row"><span class="grow"><span class="ttl">Cards saved</span></span>
-      <span class="val">${Store.cards().length}</span></div>
+      <span class="val">${Store.cards().filter(c=>c.kind!=='account').length}</span></div>
+    <div class="row"><span class="grow"><span class="ttl">Accounts saved</span></span>
+      <span class="val">${Store.cards().filter(c=>c.kind==='account').length}</span></div>
     <div class="row"><span class="grow"><span class="ttl">Lookups logged</span></span>
       <span class="val">${Store.history().length}</span></div>
     <button class="row tappable link center" data-act="export">Export a backup</button>
@@ -1068,11 +1108,12 @@ function viewSetup(){
     <div style="font-size:14px;line-height:1.55;color:var(--text-2)">
       Card ID pulls the last 4 digits out of the message — it understands
       <code class="inline">XX1234</code>, <code class="inline">ending 1234</code>,
-      <code class="inline">ending with 1234</code> and
+      <code class="inline">ending with 1234</code>, <code class="inline">A/c XXXXX1234</code> and
       <code class="inline">card no. XXXXXXXXXXXX1234</code> — then looks for a bank name
       (HDFC, ICICI, SBI, Axis, Kotak and about 40 others, plus whatever you typed as your own
-      bank names). If two of your cards share the same last 4 digits, the bank name decides.
-      If it still can’t tell, it asks you.
+      bank names). Cards and plain bank accounts are both matched the same way, so
+      “A/c XX1234 credited” works as well as a card swipe. If two saved entries share the same
+      last 4 digits, the bank name decides. If it still can’t tell, it asks you.
     </div>
   </div></div>
 
@@ -1111,8 +1152,21 @@ function openCardSheet(card){
   const d = state.draft;
   const isNew = !d.id;
 
-  openSheet(isNew ? 'Add card' : 'Edit card', `
-    <div class="sect-h">Card</div>
+  const isAccount = d.kind === 'account';
+  const noun = isAccount ? 'account' : 'card';
+  const title = isNew ? (isAccount ? 'Add account' : 'Add card') : (isAccount ? 'Edit account' : 'Edit card');
+
+  openSheet(title, `
+    <div class="sect-h">Kind</div>
+    <div class="group"><div class="field">
+      <label>This is a</label>
+      <div class="seg">
+        <button data-act="f-kind" data-id="card" class="${!isAccount?'on':''}">Card</button>
+        <button data-act="f-kind" data-id="account" class="${isAccount?'on':''}">Account</button>
+      </div></div>
+    </div>
+
+    <div class="sect-h">${isAccount ? 'Account' : 'Card'}</div>
     <div class="group">
       <div class="field"><label>Bank</label>
         <input id="f-bank" value="${escapeHtml(d.bank)}" placeholder="HDFC Bank" autocapitalize="words"
@@ -1120,20 +1174,20 @@ function openCardSheet(card){
       <div class="field"><label>Last 4</label>
         <input id="f-last4" value="${escapeHtml(d.last4)}" placeholder="1234" inputmode="numeric"
           maxlength="4" pattern="[0-9]*" class="mono"></div>
-      <div class="field"><label>Type</label>
+      ${isAccount ? '' : `<div class="field"><label>Type</label>
         <div class="seg">
           <button data-act="f-type" data-id="credit" class="${d.type==='credit'?'on':''}">Credit</button>
           <button data-act="f-type" data-id="debit"  class="${d.type==='debit'?'on':''}">Debit</button>
-        </div></div>
+        </div></div>`}
     </div>
 
-    <div class="sect-h">Whose card</div>
+    <div class="sect-h">Whose ${noun}</div>
     <div class="group">
       <div class="field"><label>Name</label>
         <input id="f-owner" value="${escapeHtml(d.owner)}" placeholder="Mine / Dad / Priya"
           autocapitalize="words" list="ownerList"></div>
       <div class="field"><label>Nickname</label>
-        <input id="f-nick" value="${escapeHtml(d.nickname)}" placeholder="Optional — travel card"
+        <input id="f-nick" value="${escapeHtml(d.nickname)}" placeholder="Optional — travel ${noun}"
           autocapitalize="sentences"></div>
     </div>
 
@@ -1150,10 +1204,10 @@ function openCardSheet(card){
         .map(o=>`<option value="${escapeHtml(o)}">`).join('')}</datalist>
 
     <div style="padding:20px 16px 0">
-      <button class="btn" data-act="save-card">${isNew ? 'Add card' : 'Save changes'}</button>
+      <button class="btn" data-act="save-card">${isNew ? (isAccount ? 'Add account' : 'Add card') : 'Save changes'}</button>
     </div>
     ${!isNew ? `<div class="group" style="margin:22px 16px 0">
-      <button class="row tappable danger" data-act="delete-card" data-id="${escapeHtml(d.id)}">Delete card</button>
+      <button class="row tappable danger" data-act="delete-card" data-id="${escapeHtml(d.id)}">Delete ${noun}</button>
     </div>` : ''}
     <div style="height:24px"></div>
   `);
@@ -1169,6 +1223,7 @@ function readCardForm(){
     owner: ($('#f-owner')||{}).value || '',
     nickname: ($('#f-nick')||{}).value || '',
     type: d.type,
+    kind: d.kind,
     color: d.color,
     createdAt: d.createdAt
   };
@@ -1185,10 +1240,10 @@ function openHistSheet(id){
     <div style="padding:16px 16px 0">
       ${snap ? cardVisual(snap) : `<div class="empty" style="padding:20px">
          <div class="ico">${e.status === 'multiple' ? '🤔' : '🤷'}</div>
-         <h3>${e.status === 'multiple' ? 'Never picked a card' : 'No card matched'}</h3>
+         <h3>${e.status === 'multiple' ? 'Never picked one' : 'No match'}</h3>
          <p>${e.status === 'multiple'
-              ? 'More than one of your cards ends in ' + escapeHtml(e.last4 || '') + '. Identify it again to choose.'
-              : (e.last4 ? 'The message mentioned ••' + escapeHtml(e.last4) + '.' : 'No card number was found in the message.')}</p></div>`}
+              ? 'More than one saved card or account ends in ' + escapeHtml(e.last4 || '') + '. Identify it again to choose.'
+              : (e.last4 ? 'The message mentioned ••' + escapeHtml(e.last4) + '.' : 'No account number was found in the message.')}</p></div>`}
       ${!card && e.card ? `<div class="note" style="padding-left:2px">This card has since been deleted.</div>` : ''}
     </div>
     <div class="sect-h">Details</div>
@@ -1297,6 +1352,7 @@ document.addEventListener('click', guard(function(ev){
       openCardSheet({
         last4: p && p.last4s[0] ? p.last4s[0] : '',
         bank: p && p.bank ? p.bank.name : '',
+        kind: (p && guessKind(p.raw)) || 'card',
         color: COLORS[Store.cards().length % COLORS.length].id
       });
       break;
@@ -1306,6 +1362,18 @@ document.addEventListener('click', guard(function(ev){
     case 'edit-card': {
       const c = Store.cards().find(x=>x.id===id);
       if (c) openCardSheet(c);
+      break;
+    }
+    case 'f-kind': {
+      // Card ↔ Account changes which fields the sheet shows, so re-render it —
+      // but keep whatever the user already typed instead of losing it.
+      const d = state.draft;
+      d.bank = ($('#f-bank')||{}).value || d.bank;
+      d.last4 = ($('#f-last4')||{}).value || d.last4;
+      d.owner = ($('#f-owner')||{}).value || d.owner;
+      d.nickname = ($('#f-nick')||{}).value || d.nickname;
+      d.kind = id;
+      openCardSheet(d);
       break;
     }
     case 'f-type':
